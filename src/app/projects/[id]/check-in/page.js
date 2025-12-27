@@ -53,6 +53,10 @@ export default function CheckInPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+          <div style={{ padding: '50px', textAlign: 'center' }}>
+      <h1>Check-in Page Working!</h1>
+      <p>If you see this, routing is fine.</p>
+    </div>
       <div className="bg-white max-w-2xl w-full rounded-xl shadow-lg p-8">
         <h1 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">
           📝 Weekly Project Check-in
