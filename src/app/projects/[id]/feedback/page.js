@@ -47,7 +47,7 @@ export default function FeedbackPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="bg-white max-w-lg w-full rounded-xl shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">📢 Client Feedback</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2"> Client Feedback</h1>
         <p className="text-gray-500 mb-6 text-sm">Your feedback helps us improve project delivery.</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">

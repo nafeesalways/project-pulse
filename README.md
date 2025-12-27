@@ -4,7 +4,7 @@ A comprehensive internal project management system designed for IT and software 
 
 ## Live Demo
 
-🔗 **Live URL:** [https://your-deployment-url.vercel.app](https://your-deployment-url.vercel.app)
+🔗 **Live URL:** [https://project-pulse-ten.vercel.app](https://project-pulse-ten.vercel.app)
 
 📹 **Demo Video:** [https://drive.google.com/your-video-link](https://drive.google.com/your-video-link)
 
