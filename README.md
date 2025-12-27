@@ -1,36 +1,165 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# ProjectPulse - Client Feedback & Project Health Tracker
 
-## Getting Started
+A comprehensive internal project management system designed for IT and software companies to monitor project health, track progress, and collect structured feedback from clients and team members.
 
-First, run the development server:
+## Live Demo
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+🔗 **Live URL:** [https://your-deployment-url.vercel.app](https://your-deployment-url.vercel.app)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+📹 **Demo Video:** [https://drive.google.com/your-video-link](https://drive.google.com/your-video-link)
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech Stack
 
-## Learn More
+### Frontend
+- **Next.js 14** (App Router)
+- **Tailwind CSS** for styling
+- **React Hot Toast** for notifications
 
-To learn more about Next.js, take a look at the following resources:
+### Backend
+- **Next.js API Routes** (Serverless Functions)j
+- **MongoDB Native Driver** (No Mongoose)
+- **JWT Authentication** for secure access
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Database
+- **MongoDB Atlas** (Cloud Database)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Deployment
+- **Vercel** (Frontend + Backend)
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Core Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Role-Based Access Control
+- **Admin:** Full system access, project creation, team assignment
+- **Employee:** View assigned projects, submit weekly check-ins
+- **Client:** View projects, provide feedback
+
+### Project Management
+- Create and manage projects with detailed information
+- Assign clients and multiple employees to projects
+- Set project timelines and track deadlines
+- Real-time project status monitoring
+
+### Weekly Check-in System (Employee)
+Employees submit weekly progress reports including:
+- **Progress Percentage** (0-100%)
+- **Confidence Level** (1-5 scale)
+- **Blockers/Challenges** (Text description)
+- **Risk Flagging** (Optional high-priority issues)
+
+### Client Feedback System
+Clients provide structured feedback:
+- **Overall Satisfaction Rating** (1-5 stars)
+- **Communication Clarity Rating** (1-5 scale)
+- **Optional Comments**
+
+### Automated Health Score Calculation
+
+The system automatically calculates a **Project Health Score (0-100)** based on:
+
+#### Algorithm Logic:
+
+#### Status Determination:
+- **80-100:** On Track (Green)
+- **60-79:** At Risk (Yellow)
+- **0-59:** Critical (Red)
+
+### Real-time Dashboards
+- **Admin Dashboard:** Overview of all projects, health metrics, risk alerts
+- **Employee Dashboard:** Personal project list, pending check-ins
+- **Client Dashboard:** Assigned projects, feedback submission
+
+---
+
+## Installation & Setup
+
+### Prerequisites
+- Node.js 18+ installed
+- MongoDB Atlas account
+- Git installed
+
+### 1. Clone Repository
+
+### 2. Install Dependencies
+
+### 3. Environment Variables
+Create a `.env.local` file in the root directory:
+
+### 4. Database Seeding
+Populate the database with demo users and data:
+
+
+This creates:
+- 1 Admin user
+- 1 Employee user  
+- 1 Client user
+
+### 5. Run Development Server
+
+
+Open [http://localhost:3000/login](http://localhost:3000/login)
+
+---
+
+## Demo Credentials
+
+### Admin Access
+
+### Employee Access
+
+### Client Access
+
+---
+
+## Project Structure
+
+
+---
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - User login with JWT token generation
+
+### Projects
+- `GET /api/projects` - Fetch all projects (Admin)
+- `POST /api/projects` - Create new project (Admin only)
+- `GET /api/projects/my-projects?userId={id}` - Employee's assigned projects
+- `GET /api/projects/client-projects?clientId={id}` - Client's projects
+
+### Check-ins & Feedback
+- `POST /api/check-ins` - Submit employee weekly check-in
+- `POST /api/feedback` - Submit client feedback
+
+### Users
+- `GET /api/users?role={role}` - Fetch users by role (for dropdowns)
+
+---
+
+## Key Implementation Highlights
+
+### 1. Serverless Architecture
+All backend logic runs as serverless functions on Vercel, ensuring scalability and zero maintenance.
+
+### 2. MongoDB Connection Pooling
+Implemented singleton pattern to prevent connection exhaustion in serverless environment.
+
+### 3. JWT-Based Security
+Token-based authentication ensures secure API access. Tokens stored in localStorage and validated on protected routes.
+
+### 4. Real-time Health Scoring
+Health score recalculates instantly upon every check-in or feedback submission, providing real-time project insights.
+
+### 5. Responsive Design
+Fully responsive UI built with Tailwind CSS, optimized for desktop, tablet, and mobile devices.
+
+---
+
+## Deployment Instructions
+
+### Deploy to Vercel
+
+1. **Push to GitHub:**
