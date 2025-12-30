@@ -1,10 +1,10 @@
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
-
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import connectToDatabase from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
 import { generateToken } from "@/lib/jwt";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request) {
   try {
@@ -17,7 +17,8 @@ export async function POST(request) {
       );
     }
 
-    const client = await clientPromise;
+    // Connect at runtime only
+    const client = await connectToDatabase();
     const db = client.db();
 
     const user = await db.collection("users").findOne({ email });
@@ -57,7 +58,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("❌ Login error:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "Internal server error", error: error.message },
       { status: 500 }
     );
   }
