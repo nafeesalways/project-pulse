@@ -1,126 +1,225 @@
-// src/app/projects/[id]/feedback/page.js
 "use client";
 
-import { useState } from "react";
+import { apiRequest } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function FeedbackPage() {
   const router = useRouter();
   const params = useParams();
-  const [loading, setLoading] = useState(false);
+  const projectId = params.id;
 
-  // Form State
+  const [project, setProject] = useState(null);
+  const [message, setMessage] = useState("");
   const [rating, setRating] = useState(5);
-  const [commRating, setCommRating] = useState(5);
-  const [comments, setComments] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+    if (!token || user.role !== "client") {
+      toast.error("Only clients can submit feedback");
+      router.push("/login");
+      return;
+    }
+
+    fetchProject();
+  }, [projectId]);
+
+  const fetchProject = async () => {
     try {
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: params.id,
-          rating,
-          communicationRating: commRating,
-          comments
-        }),
-      });
-
-      if (res.ok) {
-        toast.success("Feedback Submitted! Thank you.");
-        router.push("/dashboard/client");
-      } else {
-        toast.error("Failed to submit feedback");
-      }
+      const data = await apiRequest(`/api/projects/${projectId}/timeline`);
+      setProject(data.project);
     } catch (error) {
-      toast.error("Something went wrong");
+      console.error("Error fetching project:", error);
+      toast.error("Failed to load project");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="bg-white max-w-lg w-full rounded-xl shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2"> Client Feedback</h1>
-        <p className="text-gray-500 mb-6 text-sm">Your feedback helps us improve project delivery.</p>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* Overall Satisfaction */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Overall Satisfaction (1-5)
-            </label>
-            <div className="flex gap-2 justify-between">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  className={`flex-1 py-2 rounded-lg border font-bold transition ${
-                    rating === star 
-                      ? "bg-yellow-400 border-yellow-500 text-white shadow-md" 
-                      : "bg-white border-gray-200 text-gray-400 hover:bg-gray-50"
-                  }`}
-                >
-                  {star} ★
-                </button>
-              ))}
-            </div>
-          </div>
+    if (!message.trim()) {
+      toast.error("Please enter your feedback");
+      return;
+    }
 
-          {/* Communication Rating */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Communication Clarity (1-5)
-            </label>
-            <input 
-              type="range" min="1" max="5" 
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              value={commRating} onChange={(e) => setCommRating(e.target.value)}
-            />
-            <div className="text-center text-sm font-bold text-blue-600 mt-1">{commRating} / 5</div>
-          </div>
+    setSubmitting(true);
 
-          {/* Comments */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Additional Comments
-            </label>
-            <textarea 
-              rows="3"
-              className="w-full border border-gray-300 rounded-lg p-3 text-black focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Any specific issues or compliments?"
-              value={comments} onChange={(e) => setComments(e.target.value)}
-            />
-          </div>
+    try {
+      await apiRequest("/api/feedback", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId,
+          message,
+          rating,
+        }),
+      });
 
-          {/* Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <button 
-              type="button"
-              onClick={() => router.back()}
-              className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition shadow-md disabled:bg-indigo-300"
-            >
-              {loading ? "Submitting..." : "Submit Feedback"}
-            </button>
-          </div>
+      toast.success("Feedback submitted successfully!");
+      setMessage("");
+      setRating(5);
 
-        </form>
+      // Redirect after 1 second
+      setTimeout(() => {
+        router.push("/dashboard/client");
+      }, 1000);
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      toast.error(error.message || "Failed to submit feedback");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading project...</p>
+        </div>
       </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Project Not Found
+          </h2>
+          <button
+            onClick={() => router.back()}
+            className="text-indigo-600 hover:underline"
+          >
+            ← Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
+
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
+          <button
+            onClick={() => router.back()}
+            className="text-indigo-600 hover:text-indigo-800 font-medium mb-3 flex items-center gap-2"
+          >
+            ← Back to Dashboard
+          </button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              💬 Submit Feedback
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Share your thoughts on project progress
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Project Info */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">
+            {project.name}
+          </h2>
+          <p className="text-sm text-gray-600">{project.description}</p>
+          <div className="mt-4 flex items-center gap-4">
+            <span
+              className={`px-3 py-1 text-xs font-medium rounded-full ${
+                project.status === "On Track"
+                  ? "bg-green-100 text-green-700"
+                  : project.status === "Critical"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-yellow-100 text-yellow-700"
+              }`}
+            >
+              {project.status || "On Track"}
+            </span>
+            <span className="text-sm text-gray-600">
+              Health: <strong>{project.healthScore || 100}%</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Feedback Form */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Rating */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rate Project Progress (1-5)
+              </label>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className={`text-3xl transition ${
+                      star <= rating ? "text-yellow-500" : "text-gray-300"
+                    }`}
+                  >
+                    ⭐
+                  </button>
+                ))}
+                <span className="ml-3 text-gray-600 font-medium">
+                  {rating} / 5
+                </span>
+              </div>
+            </div>
+
+            {/* Message */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Your Feedback *
+              </label>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                required
+                rows="6"
+                placeholder="Share your thoughts, concerns, or suggestions..."
+                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-gray-900"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:bg-indigo-400 flex items-center justify-center gap-2"
+              >
+                {submitting && (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                )}
+                {submitting ? "Submitting..." : "Submit Feedback"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
     </div>
   );
 }

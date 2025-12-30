@@ -1,73 +1,130 @@
-// src/app/api/feedback/route.js
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { verifyToken } from "@/lib/jwt";
 
-export async function POST(request) {
+function getTokenFromRequest(request) {
+  const authHeader = request.headers.get("Authorization");
+  return authHeader?.replace("Bearer ", "");
+}
+
+export async function GET(request) {
   try {
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token);
+
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get("projectId");
+
     const client = await clientPromise;
     const db = client.db();
 
-    const body = await request.json();
-    const { projectId, rating, communicationRating, comments } = body;
-
-    if (!projectId || !rating || !communicationRating) {
-      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+    let query = {};
+    if (projectId) {
+      query.projectId = new ObjectId(projectId);
     }
 
-    // 1. Save Feedback
+    const feedbacks = await db
+      .collection("feedbacks")
+      .find(query)
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return NextResponse.json(feedbacks);
+  } catch (error) {
+    console.error("Feedback GET error:", error);
+    return NextResponse.json(
+      { message: error.message || "Failed to fetch feedbacks" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request) {
+  try {
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token);
+    console.log("Feedback API authenticated:", decoded.email);
+
+    // Only clients can submit feedback
+    if (decoded.role !== "client") {
+      return NextResponse.json(
+        { message: "Only clients can submit feedback" },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { projectId, message, rating } = body;
+
+    // Validation
+    if (!projectId || !message) {
+      return NextResponse.json(
+        { message: "Project ID and message are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!ObjectId.isValid(projectId)) {
+      return NextResponse.json(
+        { message: "Invalid project ID" },
+        { status: 400 }
+      );
+    }
+
+    const client = await clientPromise;
+    const db = client.db();
+
+    // Check if project exists
+    const project = await db
+      .collection("projects")
+      .findOne({ _id: new ObjectId(projectId) });
+
+    if (!project) {
+      return NextResponse.json(
+        { message: "Project not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is the client of this project
+    if (project.clientId?.toString() !== decoded.userId) {
+      return NextResponse.json(
+        { message: "You can only provide feedback for your own projects" },
+        { status: 403 }
+      );
+    }
+
+    // Create feedback
     const feedback = {
       projectId: new ObjectId(projectId),
-      rating: parseInt(rating), // 1-5
-      communicationRating: parseInt(communicationRating), // 1-5
-      comments: comments || "",
-      submittedAt: new Date(),
+      clientId: decoded.userId,
+      message,
+      rating: rating || null,
+      createdAt: new Date(),
     };
 
-    await db.collection("feedbacks").insertOne(feedback);
+    const result = await db.collection("feedbacks").insertOne(feedback);
 
-    // 2. 🧠 RECALCULATE HEALTH SCORE (Simplified) 🧠
-    // We fetch the project's current score and adjust it based on this new feedback
-    // In a real app, you'd fetch all recent data points again. 
-    // Here, we apply a direct impact.
-    
-    const project = await db.collection("projects").findOne({ _id: new ObjectId(projectId) });
-    let currentScore = project.healthScore || 100;
+    console.log("Feedback created:", result.insertedId);
 
-    // Logic: 
-    // Rating 5 -> No change or +5 (Bonus)
-    // Rating 4 -> No change
-    // Rating 3 -> -10 points
-    // Rating 1-2 -> -20 points
-    
-    let adjustment = 0;
-    if (rating === 5) adjustment = 5;
-    else if (rating === 3) adjustment = -10;
-    else if (rating < 3) adjustment = -20;
-
-    let newHealthScore = Math.min(100, Math.max(0, currentScore + adjustment));
-
-    // Determine Status
-    let newStatus = "On Track";
-    if (newHealthScore < 60) newStatus = "Critical";
-    else if (newHealthScore < 80) newStatus = "At Risk";
-
-    // 3. Update Project
-    await db.collection("projects").updateOne(
-      { _id: new ObjectId(projectId) },
-      { 
-        $set: { 
-          healthScore: newHealthScore,
-          status: newStatus,
-          updatedAt: new Date()
-        } 
-      }
-    );
-
-    return NextResponse.json({ message: "Feedback submitted successfully!", newHealthScore });
-
+    return NextResponse.json({
+      message: "Feedback submitted successfully",
+      feedbackId: result.insertedId,
+    });
   } catch (error) {
-    console.error("Feedback Error:", error);
-    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+    console.error("Feedback POST error:", error);
+    return NextResponse.json(
+      { message: error.message || "Failed to submit feedback" },
+      { status: error.message === "Invalid token" ? 401 : 500 }
+    );
   }
 }

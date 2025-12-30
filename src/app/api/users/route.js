@@ -1,30 +1,48 @@
-// src/app/api/users/route.js
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { verifyToken } from "@/lib/jwt";
+
+function getTokenFromRequest(request) {
+  const authHeader = request.headers.get("Authorization");
+  return authHeader?.replace("Bearer ", "");
+}
 
 export async function GET(request) {
   try {
+    // Verify token
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const decoded = verifyToken(token);
+
     const { searchParams } = new URL(request.url);
-    const role = searchParams.get("role"); // e.g. /api/users?role=client
+    const role = searchParams.get("role");
 
     const client = await clientPromise;
     const db = client.db();
 
     let query = {};
-    
-    // If a specific role is requested, filter by it (exclude sensitive fields like password)
     if (role) {
       query.role = role;
     }
 
-    const users = await db.collection("users")
+    const users = await db
+      .collection("users")
       .find(query)
-      .project({ name: 1, email: 1, role: 1 }) // Only return necessary fields
+      .project({ password: 0 }) // Don't send passwords
       .toArray();
 
     return NextResponse.json(users);
-
   } catch (error) {
-    return NextResponse.json({ message: "Error fetching users" }, { status: 500 });
+    console.error("Users API error:", error);
+    return NextResponse.json(
+      { message: error.message || "Failed to fetch users" },
+      { status: error.message === "Invalid token" ? 401 : 500 }
+    );
   }
 }
