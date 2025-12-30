@@ -1,87 +1,113 @@
-// src/scripts/seedUsers.js
 const { MongoClient } = require("mongodb");
 const bcrypt = require("bcryptjs");
 
-const uri = "mongodb://127.0.0.1:27017/projectpulse";
+// Use Atlas URI for production, localhost for dev
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/projectpulse";
 
-async function seedUsers() {
-  const client = new MongoClient(uri);
+async function seed() {
+  const client = new MongoClient(MONGODB_URI);
 
   try {
     await client.connect();
-    console.log("Connected to MongoDB");
+    console.log("🔄 Seeding database...");
 
     const db = client.db();
-    const usersCollection = db.collection("users");
 
-    // Clear existing users (optional)
-    await usersCollection.deleteMany({});
-    console.log("Cleared existing users");
+    // Clear existing data
+    await db.collection("users").deleteMany({});
+    await db.collection("projects").deleteMany({});
 
-    // Hash passwords
-    const adminPassword = await bcrypt.hash("admin123", 10);
-    const empPassword = await bcrypt.hash("123", 10);
-    const clientPassword = await bcrypt.hash("123", 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash("admin123", 10);
+    const hashedPassword123 = await bcrypt.hash("123", 10);
 
-    // Insert users
+    // Create users
     const users = [
       {
         name: "Admin User",
         email: "admin@test.com",
-        password: adminPassword,
+        password: hashedPassword,
         role: "admin",
         createdAt: new Date(),
       },
       {
-        name: "John Doe",
+        name: "Employee One",
         email: "emp1@test.com",
-        password: empPassword,
+        password: hashedPassword123,
         role: "employee",
         createdAt: new Date(),
       },
       {
-        name: "Jane Smith",
+        name: "Employee Two",
         email: "emp2@test.com",
-        password: empPassword,
+        password: hashedPassword123,
         role: "employee",
         createdAt: new Date(),
       },
       {
-        name: "Client A",
+        name: "Client One",
         email: "client1@test.com",
-        password: clientPassword,
+        password: hashedPassword123,
         role: "client",
         createdAt: new Date(),
       },
       {
-        name: "Client B",
+        name: "Client Two",
         email: "client2@test.com",
-        password: clientPassword,
+        password: hashedPassword123,
         role: "client",
         createdAt: new Date(),
       },
     ];
 
-    const result = await usersCollection.insertMany(users);
-    console.log(`Inserted ${result.insertedCount} users`);
+    const userResult = await db.collection("users").insertMany(users);
+    console.log("✅ Users created:", userResult.insertedCount);
 
-    // Show inserted users (without passwords)
-    const insertedUsers = await usersCollection
-      .find({})
-      .project({ password: 0 })
-      .toArray();
+    // Get user IDs
+    const allUsers = await db.collection("users").find({}).toArray();
+    const adminUser = allUsers.find((u) => u.role === "admin");
+    const emp1 = allUsers.find((u) => u.email === "emp1@test.com");
+    const emp2 = allUsers.find((u) => u.email === "emp2@test.com");
+    const client1 = allUsers.find((u) => u.email === "client1@test.com");
+    const client2 = allUsers.find((u) => u.email === "client2@test.com");
 
-    console.log("\n📋 Users created:");
-    insertedUsers.forEach((user) => {
-      console.log(`   - ${user.email} (${user.role})`);
-    });
+    // Create projects
+    const projects = [
+      {
+        name: "E-Commerce Platform",
+        description: "Build a modern e-commerce website",
+        startDate: new Date("2025-01-01"),
+        endDate: new Date("2025-06-30"),
+        status: "On Track",
+        healthScore: 85,
+        clientId: client1._id,
+        employeeIds: [emp1._id],
+        createdBy: adminUser._id,
+        createdAt: new Date(),
+      },
+      {
+        name: "Mobile App Development",
+        description: "iOS and Android app for inventory management",
+        startDate: new Date("2025-02-01"),
+        endDate: new Date("2025-08-31"),
+        status: "At Risk",
+        healthScore: 65,
+        clientId: client2._id,
+        employeeIds: [emp2._id],
+        createdBy: adminUser._id,
+        createdAt: new Date(),
+      },
+    ];
 
-    console.log("\n🎉 Database seeded successfully!");
+    const projectResult = await db.collection("projects").insertMany(projects);
+    console.log("Projects created:", projectResult.insertedCount);
+
+    console.log("Database seeded successfully!");
   } catch (error) {
-    console.error("Error seeding database:", error);
+    console.error("Seed error:", error);
   } finally {
     await client.close();
   }
 }
 
-seedUsers();
+seed();
