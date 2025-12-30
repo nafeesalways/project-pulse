@@ -1,20 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Prevent MongoDB from being bundled in the client
+  // Externalize MongoDB from webpack
   webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        net: false,
-        dns: false,
-        tls: false,
-        fs: false,
-        'mongodb-client-encryption': false,
-      };
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        'mongodb': 'commonjs mongodb',
+        'mongodb-client-encryption': 'commonjs mongodb-client-encryption',
+      });
     }
     return config;
   },
-  // Exclude MongoDB from serverless function bundling
   experimental: {
     serverComponentsExternalPackages: ['mongodb'],
   },
