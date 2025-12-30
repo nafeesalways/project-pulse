@@ -18,19 +18,28 @@ async function connectToDatabase() {
 
   const options = {
     maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000, // Increased to 10 seconds
     socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
+    retryWrites: true,
+    w: 'majority',
   };
 
   try {
     client = new MongoClient(uri, options);
     clientPromise = client.connect();
+    
+    // Test connection
+    const connected = await clientPromise;
+    await connected.db("admin").command({ ping: 1 });
+    console.log("✅ MongoDB connected successfully");
+    
     return clientPromise;
   } catch (e) {
-    console.error("Failed to connect to MongoDB:", e);
+    console.error("❌ MongoDB connection failed:", e);
+    clientPromise = null; // Reset on failure
     throw e;
   }
 }
 
-// Don't connect during build - export a function instead
 export default connectToDatabase;

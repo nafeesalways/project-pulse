@@ -17,9 +17,9 @@ export async function POST(request) {
       );
     }
 
-    // Connect at runtime only
+    // Connect and specify database name explicitly
     const client = await connectToDatabase();
-    const db = client.db();
+    const db = client.db("projectpulse"); // Explicitly specify DB name
 
     const user = await db.collection("users").findOne({ email });
 
@@ -58,7 +58,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("❌ Login error:", error);
     return NextResponse.json(
-      { message: "Internal server error", error: error.message },
+      { message: "Internal server error", details: error.message },
       { status: 500 }
     );
   }
