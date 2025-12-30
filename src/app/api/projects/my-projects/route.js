@@ -1,4 +1,8 @@
 // src/app/api/projects/my-projects/route.js
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
