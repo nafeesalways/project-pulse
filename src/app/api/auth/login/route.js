@@ -5,6 +5,7 @@ import { generateToken } from "@/lib/jwt";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const maxDuration = 60; // Max timeout 60 seconds
 
 export async function POST(request) {
   try {
@@ -17,10 +18,10 @@ export async function POST(request) {
       );
     }
 
-    // Connect and specify database name explicitly
-    const client = await connectToDatabase();
-    const db = client.db("projectpulse"); // Explicitly specify DB name
-
+    // Connect to database
+    const { db } = await connectToDatabase();
+    
+    // Find user
     const user = await db.collection("users").findOne({ email });
 
     if (!user) {
@@ -30,6 +31,7 @@ export async function POST(request) {
       );
     }
 
+    // Verify password
     const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) {
@@ -39,6 +41,7 @@ export async function POST(request) {
       );
     }
 
+    // Generate JWT token
     const token = generateToken({
       userId: user._id.toString(),
       email: user.email,
@@ -58,7 +61,10 @@ export async function POST(request) {
   } catch (error) {
     console.error("❌ Login error:", error);
     return NextResponse.json(
-      { message: "Internal server error", details: error.message },
+      { 
+        message: "Internal server error",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }

@@ -1,45 +1,55 @@
 import { MongoClient } from "mongodb";
 
-let client = null;
-let clientPromise = null;
+let cachedClient = null;
+let cachedDb = null;
 
-async function connectToDatabase() {
-  if (clientPromise) {
-    return clientPromise;
+export default async function connectToDatabase() {
+  // Return cached connection if exists
+  if (cachedClient && cachedDb) {
+    return { client: cachedClient, db: cachedDb };
   }
 
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {
-    throw new Error(
-      'Invalid/Missing environment variable: "MONGODB_URI"'
-    );
+    throw new Error('Please define MONGODB_URI environment variable');
   }
 
   const options = {
+    // Increase timeouts for serverless environment
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 75000,
+    connectTimeoutMS: 30000,
+    
+    // Connection pool settings
     maxPoolSize: 10,
-    serverSelectionTimeoutMS: 10000, // Increased to 10 seconds
-    socketTimeoutMS: 45000,
-    connectTimeoutMS: 10000,
+    minPoolSize: 1,
+    
+    // Write concern
     retryWrites: true,
     w: 'majority',
   };
 
   try {
-    client = new MongoClient(uri, options);
-    clientPromise = client.connect();
+    console.log('🔄 Connecting to MongoDB...');
+    
+    const client = new MongoClient(uri, options);
+    await client.connect();
+    
+    const db = client.db('projectpulse');
     
     // Test connection
-    const connected = await clientPromise;
-    await connected.db("admin").command({ ping: 1 });
-    console.log("✅ MongoDB connected successfully");
+    await db.admin().ping();
     
-    return clientPromise;
-  } catch (e) {
-    console.error("❌ MongoDB connection failed:", e);
-    clientPromise = null; // Reset on failure
-    throw e;
+    console.log('✅ MongoDB connected successfully');
+    
+    // Cache the connection
+    cachedClient = client;
+    cachedDb = db;
+    
+    return { client, db };
+  } catch (error) {
+    console.error('❌ MongoDB connection failed:', error.message);
+    throw error;
   }
 }
-
-export default connectToDatabase;
